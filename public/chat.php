@@ -161,11 +161,16 @@ function convertMessagesToResponseInput(array $messages): array
             continue;
         }
 
+        $contentType = match ($role) {
+            'assistant' => 'output_text',
+            default => 'input_text',
+        };
+
         $input[] = [
             'role' => $role,
             'content' => [
                 [
-                    'type' => 'text',
+                    'type' => $contentType,
                     'text' => $contentText,
                 ],
             ],
