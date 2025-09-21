@@ -126,7 +126,7 @@ function buildChatMessages(string $contextText, $history, string $question): arr
 function requestOpenAi(string $apiKey, array $messages): string
 {
     $payloadData = [
-        'model' => 'gpt-5-mini',
+        'model' => 'gpt-5-nano',
         'messages' => $messages,
         'max_completion_tokens' => 512,
     ];
