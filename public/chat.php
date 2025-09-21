@@ -123,12 +123,66 @@ function buildChatMessages(string $contextText, $history, string $question): arr
     return $messages;
 }
 
+/**
+ * @param array<int, array<string, mixed>> $messages
+ * @return array<int, array<string, mixed>>
+ */
+function convertMessagesToResponseInput(array $messages): array
+{
+    $input = [];
+
+    foreach ($messages as $message) {
+        if (!is_array($message)) {
+            continue;
+        }
+
+        $role = $message['role'] ?? null;
+
+        if (!is_string($role) || $role === '') {
+            continue;
+        }
+
+        $content = $message['content'] ?? null;
+        $contentText = null;
+
+        if (is_string($content)) {
+            $contentText = $content;
+        } elseif (is_array($content)) {
+            $contentText = normalizeOpenAiContent($content);
+        } elseif ($content !== null) {
+            $contentText = (string) $content;
+        }
+
+        if (!is_string($contentText)) {
+            continue;
+        }
+
+        if (trim($contentText) === '') {
+            continue;
+        }
+
+        $input[] = [
+            'role' => $role,
+            'content' => [
+                [
+                    'type' => 'text',
+                    'text' => $contentText,
+                ],
+            ],
+        ];
+    }
+
+    return $input;
+}
+
 function requestOpenAi(string $apiKey, array $messages): string
 {
+    $inputMessages = convertMessagesToResponseInput($messages);
+
     $payloadData = [
         'model' => 'gpt-5-nano',
-        'messages' => $messages,
-        'max_completion_tokens' => 512,
+        'input' => $inputMessages,
+        'max_output_tokens' => 512,
     ];
 
     $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -136,11 +190,12 @@ function requestOpenAi(string $apiKey, array $messages): string
     if ($payload === false) {
         $debugInfo = formatOpenAiDebugInfo('Failed to encode request payload for OpenAI API.', [
             'messages_count' => count($messages),
+            'input_count' => count($inputMessages),
         ]);
         throw new RuntimeException('リクエストの作成に失敗しました。' . "\n" . $debugInfo);
     }
 
-    $ch = curl_init('https://api.openai.com/v1/chat/completions');
+    $ch = curl_init('https://api.openai.com/v1/responses');
     if ($ch === false) {
         $debugInfo = formatOpenAiDebugInfo('Failed to initialize cURL for OpenAI API request.');
         throw new RuntimeException('リクエストの初期化に失敗しました。' . "\n" . $debugInfo);
@@ -201,13 +256,71 @@ function requestOpenAi(string $apiKey, array $messages): string
         throw new RuntimeException('OpenAI API から有効な回答が得られませんでした。' . "\n" . $debugInfo);
     }
 
-    logOpenAiPrompt($payloadData, $answer, $decoded);
+    $logPayload = [
+        'model' => $payloadData['model'],
+        'max_output_tokens' => $payloadData['max_output_tokens'],
+        'messages' => $messages,
+    ];
+
+    logOpenAiPrompt($logPayload, $answer, $decoded);
 
     return $answer;
 }
 
 function extractOpenAiAnswer(array $response): ?string
 {
+    $candidates = [];
+
+    if (array_key_exists('output_text', $response)) {
+        $text = normalizeOpenAiContent($response['output_text']);
+        if ($text !== null) {
+            $candidates[] = $text;
+        }
+    }
+
+    if (isset($response['output']) && is_array($response['output'])) {
+        foreach ($response['output'] as $outputItem) {
+            if (!is_array($outputItem)) {
+                continue;
+            }
+
+            if (isset($outputItem['content'])) {
+                $text = normalizeOpenAiContent($outputItem['content']);
+                if ($text !== null) {
+                    $candidates[] = $text;
+                }
+            }
+
+            if (isset($outputItem['text'])) {
+                $text = normalizeOpenAiContent($outputItem['text']);
+                if ($text !== null) {
+                    $candidates[] = $text;
+                }
+            }
+
+            if (isset($outputItem['message'])) {
+                $text = normalizeOpenAiContent($outputItem['message']);
+                if ($text !== null) {
+                    $candidates[] = $text;
+                }
+            }
+        }
+    }
+
+    if ($candidates !== []) {
+        $parts = [];
+        foreach ($candidates as $candidate) {
+            $trimmed = trim($candidate);
+            if ($trimmed !== '') {
+                $parts[] = $trimmed;
+            }
+        }
+
+        if ($parts !== []) {
+            return implode("\n\n", $parts);
+        }
+    }
+
     if (!isset($response['choices']) || !is_array($response['choices'])) {
         return null;
     }
@@ -245,42 +358,54 @@ function normalizeOpenAiContent(mixed $content): ?string
         return trim($content) === '' ? null : $content;
     }
 
-    if (!is_array($content)) {
+    if ($content === null) {
         return null;
     }
 
-    $parts = [];
+    if (is_array($content)) {
+        if (!array_is_list($content)) {
+            if (isset($content['text']) && is_string($content['text'])) {
+                $text = $content['text'];
+                return trim($text) === '' ? null : $text;
+            }
 
-    foreach ($content as $part) {
-        if (is_string($part)) {
-            $parts[] = $part;
-            continue;
+            if (isset($content['value']) && is_string($content['value'])) {
+                $value = $content['value'];
+                return trim($value) === '' ? null : $value;
+            }
+
+            if (isset($content['content'])) {
+                return normalizeOpenAiContent($content['content']);
+            }
+
+            if (isset($content['output_text'])) {
+                return normalizeOpenAiContent($content['output_text']);
+            }
+
+            $content = array_values($content);
         }
 
-        if (!is_array($part)) {
-            continue;
-        }
+        $parts = [];
 
-        if (isset($part['text']) && is_string($part['text'])) {
-            $parts[] = $part['text'];
-            continue;
-        }
-
-        if (isset($part['content'])) {
-            $nested = normalizeOpenAiContent($part['content']);
-            if ($nested !== null) {
-                $parts[] = $nested;
+        foreach ($content as $part) {
+            $text = normalizeOpenAiContent($part);
+            if ($text !== null) {
+                $parts[] = $text;
             }
         }
+
+        if ($parts === []) {
+            return null;
+        }
+
+        $joined = implode('', $parts);
+
+        return trim($joined) === '' ? null : $joined;
     }
 
-    if ($parts === []) {
-        return null;
-    }
+    $string = (string) $content;
 
-    $joined = implode('', $parts);
-
-    return trim($joined) === '' ? null : $joined;
+    return trim($string) === '' ? null : $string;
 }
 
 function formatOpenAiDebugInfo(string $message, array $context = []): string
@@ -320,20 +445,43 @@ function logOpenAiPrompt(array $payloadData, string $answer, array $responseData
                 continue;
             }
 
+            $contentValue = $message['content'] ?? '';
+            $normalizedContent = normalizeOpenAiContent($contentValue);
+
             $messages[] = [
                 'role' => (string) ($message['role'] ?? ''),
-                'content' => (string) ($message['content'] ?? ''),
+                'content' => $normalizedContent ?? '',
+            ];
+        }
+    } elseif (isset($payloadData['input']) && is_array($payloadData['input'])) {
+        foreach ($payloadData['input'] as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+
+            $normalizedContent = normalizeOpenAiContent($message['content'] ?? '');
+
+            $messages[] = [
+                'role' => (string) ($message['role'] ?? ''),
+                'content' => $normalizedContent ?? '',
             ];
         }
     }
 
+    $requestEntry = [
+        'model' => $payloadData['model'] ?? null,
+        'messages' => $messages,
+    ];
+
+    if (isset($payloadData['max_output_tokens'])) {
+        $requestEntry['max_output_tokens'] = $payloadData['max_output_tokens'];
+    } elseif (isset($payloadData['max_completion_tokens'])) {
+        $requestEntry['max_completion_tokens'] = $payloadData['max_completion_tokens'];
+    }
+
     $entry = [
         'timestamp' => date('c'),
-        'request' => [
-            'model' => $payloadData['model'] ?? null,
-            'max_completion_tokens' => $payloadData['max_completion_tokens'] ?? null,
-            'messages' => $messages,
-        ],
+        'request' => $requestEntry,
         'response' => [
             'answer' => $answer,
         ],
