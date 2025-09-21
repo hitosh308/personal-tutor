@@ -86,7 +86,8 @@ function buildChatMessages(string $contextText, $history, string $question): arr
     $messages = [];
 
     $systemPrompt = "あなたは小学生・中学生を優しくサポートする家庭教師です。" .
-        "生徒の理解度に合わせて丁寧に日本語で説明し、必要に応じて例やステップを示してください。" .
+        "回答は簡潔な日本語で行い、最重要ポイントだけを 2 文以内または 120 文字程度で伝えてください。" .
+        "必要に応じて例を挙げる場合も短くまとめてください。" .
         "以下は現在取り組んでいる教材情報です。回答の際は必ずこの情報を踏まえてください。\n---\n" .
         $contextText . "\n---";
 
@@ -187,7 +188,7 @@ function requestOpenAi(string $apiKey, array $messages): string
     $payloadData = [
         'model' => 'gpt-5-nano',
         'input' => $inputMessages,
-        'max_output_tokens' => 5120,
+        'max_output_tokens' => 512,
     ];
 
     $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -512,17 +513,117 @@ function logOpenAiPrompt(array $payloadData, string $answer, array $responseData
 
 function buildFallbackResponse(array $subject, array $unit, string $question, string $contextText): array
 {
-    $lines = [];
-    $lines[] = '（デモ応答）OpenAI API キーが設定されていないため、教材のポイントを元にヒントを表示します。';
-    $lines[] = '学習中: ' . ($subject['name'] ?? $subject['id'] ?? '') . ' / ' . ($unit['name'] ?? $unit['id'] ?? '');
-    $lines[] = '質問: ' . $question;
-    $lines[] = '--- 教材のまとめ ---';
-    $lines[] = $contextText;
-    $lines[] = '----------------------';
-    $lines[] = '環境変数 OPENAI_API_KEY にキーを設定すると、AI 家庭教師からの回答が有効になります。';
+    $summary = extractContextSummary($contextText, 120);
+
+    $subjectLabel = trim((string) ($subject['name'] ?? $subject['id'] ?? ''));
+    $unitLabel = trim((string) ($unit['name'] ?? $unit['id'] ?? ''));
+
+    if ($subjectLabel !== '' && $unitLabel !== '') {
+        $answer = '（デモ応答）AI キー未設定です（' . $subjectLabel . ' / ' . $unitLabel . '）。';
+    } elseif ($subjectLabel !== '') {
+        $answer = '（デモ応答）AI キー未設定です（' . $subjectLabel . '）。';
+    } elseif ($unitLabel !== '') {
+        $answer = '（デモ応答）AI キー未設定です（' . $unitLabel . '）。';
+    } else {
+        $answer = '（デモ応答）AI キー未設定です。';
+    }
+
+    if ($summary !== '') {
+        $trimmedSummary = rtrim($summary);
+        $answer .= '要点: ' . $trimmedSummary;
+        if (!preg_match('/[。．!！?？]$/u', $trimmedSummary)) {
+            $answer .= '。';
+        }
+    } else {
+        $answer .= '教材のポイントを確認してね。';
+    }
 
     return [
-        'answer' => implode("\n", $lines),
+        'answer' => $answer,
         'source' => 'fallback',
     ];
+}
+
+function extractContextSummary(string $contextText, int $maxLength = 120): string
+{
+    $normalized = preg_replace('/\s+/u', ' ', trim($contextText));
+    if (!is_string($normalized) || $normalized === '') {
+        return '';
+    }
+
+    $sentences = preg_split('/(?<=[。．!！?？])/u', $normalized, -1, PREG_SPLIT_NO_EMPTY);
+    if ($sentences === false) {
+        $sentences = [];
+    }
+
+    $summary = '';
+    foreach ($sentences as $sentence) {
+        $sentence = trim((string) $sentence);
+        if ($sentence === '') {
+            continue;
+        }
+
+        if ($summary === '') {
+            $summary = $sentence;
+        } else {
+            $candidate = $summary . ' ' . $sentence;
+            if (stringLength($candidate) > $maxLength) {
+                break;
+            }
+            $summary = $candidate;
+        }
+
+        if (stringLength($summary) >= (int) floor($maxLength * 0.7)) {
+            break;
+        }
+    }
+
+    if ($summary === '') {
+        $summary = $normalized;
+    }
+
+    if (stringLength($summary) > $maxLength) {
+        $summary = truncateText($summary, $maxLength);
+    }
+
+    return $summary;
+}
+
+function truncateText(string $text, int $maxLength): string
+{
+    if ($maxLength <= 0) {
+        return '';
+    }
+
+    $text = trim($text);
+    if ($text === '') {
+        return '';
+    }
+
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($text, 'UTF-8') <= $maxLength) {
+            return $text;
+        }
+
+        $sliceLength = max(1, $maxLength - 1);
+
+        return rtrim(mb_substr($text, 0, $sliceLength, 'UTF-8')) . '…';
+    }
+
+    if (strlen($text) <= $maxLength) {
+        return $text;
+    }
+
+    $sliceLength = max(1, $maxLength - 1);
+
+    return rtrim(substr($text, 0, $sliceLength)) . '…';
+}
+
+function stringLength(string $text): int
+{
+    if (function_exists('mb_strlen')) {
+        return mb_strlen($text, 'UTF-8');
+    }
+
+    return strlen($text);
 }
