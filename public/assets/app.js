@@ -62,8 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!response.ok || data.error) {
         const message = data.error || 'エラーが発生しました。時間をおいて再度お試しください。';
+        const detail = typeof data.details === 'string' ? data.details.trim() : '';
+        const composedMessage = detail ? `${message}\n${detail}` : message;
         pendingBubble.className = 'chat-bubble system';
-        pendingBubble.textContent = message;
+        pendingBubble.textContent = composedMessage;
         return;
       }
 
