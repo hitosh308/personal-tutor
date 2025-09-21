@@ -9,13 +9,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('tutor-form');
   const textarea = document.getElementById('question');
   const historyContainer = document.getElementById('chat-history');
-  const submitButton = form.querySelector('button[type="submit"]');
+  const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+  const openButton = document.getElementById('chat-open-button');
+  const closeButton = document.getElementById('chat-close-button');
+  const overlay = document.getElementById('chat-overlay');
+  const chatMediaQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 768px)') : null;
 
-  if (!subjectId || !unitId || !form || !textarea || !historyContainer) {
+  if (!subjectId || !unitId || !form || !textarea || !historyContainer || !submitButton) {
     return;
   }
 
   const conversation = [];
+
+  setupMobileSidebar();
 
   appendBubble('system', '学習中の内容に関して聞きたいことがあれば、メッセージを送ってください。');
 
@@ -84,6 +90,67 @@ document.addEventListener('DOMContentLoaded', () => {
       form.requestSubmit();
     }
   });
+
+  function setupMobileSidebar() {
+    if (!openButton || !closeButton || !overlay || !chatMediaQuery) {
+      return;
+    }
+
+    const closeSidebar = (returnFocus = true, isMobileView = chatMediaQuery.matches) => {
+      chatSection.classList.remove('is-open');
+      overlay.classList.remove('is-active');
+      overlay.setAttribute('hidden', 'true');
+      document.body.classList.remove('chat-sidebar-open');
+      openButton.setAttribute('aria-expanded', 'false');
+
+      if (isMobileView) {
+        chatSection.setAttribute('inert', '');
+        if (returnFocus) {
+          openButton.focus();
+        }
+      } else {
+        chatSection.removeAttribute('inert');
+      }
+    };
+
+    const openSidebar = () => {
+      if (!chatMediaQuery.matches) {
+        return;
+      }
+
+      chatSection.removeAttribute('inert');
+      chatSection.classList.add('is-open');
+      overlay.removeAttribute('hidden');
+      overlay.classList.add('is-active');
+      document.body.classList.add('chat-sidebar-open');
+      openButton.setAttribute('aria-expanded', 'true');
+      closeButton.focus();
+      scrollToBottom(historyContainer);
+    };
+
+    const handleMediaChange = (event) => {
+      closeSidebar(false, event.matches);
+    };
+
+    openButton.addEventListener('click', openSidebar);
+    closeButton.addEventListener('click', () => closeSidebar(true));
+    overlay.addEventListener('click', () => closeSidebar(true));
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && chatSection.classList.contains('is-open')) {
+        event.preventDefault();
+        closeSidebar(true);
+      }
+    });
+
+    handleMediaChange(chatMediaQuery);
+
+    if (typeof chatMediaQuery.addEventListener === 'function') {
+      chatMediaQuery.addEventListener('change', handleMediaChange);
+    } else if (typeof chatMediaQuery.addListener === 'function') {
+      chatMediaQuery.addListener(handleMediaChange);
+    }
+  }
 
   function appendBubble(role, text) {
     const bubble = document.createElement('div');
