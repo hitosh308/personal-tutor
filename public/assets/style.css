@@ -67,6 +67,10 @@ a {
     gap: 24px;
 }
 
+.app-main--learning {
+    gap: 32px;
+}
+
 .panel {
     background: var(--panel-background);
     border-radius: 16px;
@@ -130,10 +134,156 @@ a {
     background: #ffffff;
 }
 
+.start-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.start-panel__summary,
+.start-panel__meta,
+.start-panel__overview {
+    margin: 0;
+    color: var(--muted-text);
+}
+
+.start-panel__summary strong {
+    color: #1f3561;
+}
+
+.primary-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 12px 30px rgba(63, 106, 216, 0.25);
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-button:hover {
+    background: #2e55c7;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 36px rgba(63, 106, 216, 0.35);
+}
+
+.primary-button:focus-visible {
+    outline: 3px solid rgba(63, 106, 216, 0.4);
+    outline-offset: 4px;
+}
+
+.info-panel p {
+    margin: 0;
+    color: var(--muted-text);
+}
+
+.link-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.link-button::before {
+    content: '\2190';
+    font-size: 0.95rem;
+}
+
+.link-button:hover {
+    text-decoration: underline;
+}
+
 .learning-panel {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    padding: 24px;
+}
+
+.learning-content {
+    display: flex;
+    flex-direction: column;
     gap: 24px;
+}
+
+.learning-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.learning-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.learning-heading h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #2d4a87;
+}
+
+.learning-return {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted-text);
+}
+
+.learning-meta {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--muted-text);
+}
+
+.chat-toggle-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: #243b6b;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(63, 106, 216, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.chat-toggle-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 32px rgba(63, 106, 216, 0.3);
+    background: #f0f4ff;
+}
+
+.chat-toggle-button:focus-visible {
+    outline: 3px solid rgba(63, 106, 216, 0.35);
+    outline-offset: 3px;
+}
+
+.chat-toggle-button[aria-expanded="true"] {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 12px 30px rgba(63, 106, 216, 0.35);
+}
+
+.chat-toggle-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.chat-toggle-button[aria-expanded="true"] .chat-toggle-icon {
+    color: inherit;
 }
 
 .learning-content h3 {
@@ -191,12 +341,55 @@ a {
 
 .tutor-chat {
     background: #fffaf0;
-    border-radius: 16px;
-    padding: 20px;
     border: 1px solid #fcd9a3;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(92vw, 360px);
+    max-width: 100%;
+    height: 100dvh;
+    padding: calc(24px + env(safe-area-inset-top)) 24px calc(32px + env(safe-area-inset-bottom));
+    border-radius: 0;
+    border-left: 1px solid #fcd9a3;
+    border-right: none;
+    border-top: none;
+    border-bottom: none;
+    box-shadow: -18px 0 36px rgba(15, 23, 42, 0.25);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 1100;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tutor-chat.is-open {
+    transform: translateX(0);
+}
+
+@media (min-width: 1200px) {
+    .tutor-chat {
+        width: 400px;
+    }
+}
+
+.chat-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1090;
+}
+
+.chat-overlay.is-active {
+    display: block;
+}
+
+body.chat-sidebar-open {
+    overflow: hidden;
 }
 
 .chat-header {
@@ -210,38 +403,10 @@ a {
     margin: 0;
 }
 
-.chat-open-button {
-    display: none;
-    margin: 12px 0 0;
-    padding: 10px 18px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 10px 26px rgba(63, 106, 216, 0.35);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.chat-open-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 32px rgba(63, 106, 216, 0.4);
-}
-
-.chat-open-button:active {
-    transform: translateY(0);
-    box-shadow: 0 8px 22px rgba(63, 106, 216, 0.35);
-}
-
-.chat-open-button:focus-visible {
-    outline: 3px solid rgba(63, 106, 216, 0.45);
-    outline-offset: 2px;
-}
-
 .chat-close-button {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: none;
     border: none;
     color: #8b5c11;
@@ -249,6 +414,11 @@ a {
     cursor: pointer;
     padding: 4px 10px;
     border-radius: 999px;
+    font-size: 0.9rem;
+}
+
+.chat-close-button::before {
+    content: '\2715';
     font-size: 0.85rem;
 }
 
@@ -259,10 +429,6 @@ a {
 .chat-close-button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-}
-
-.chat-overlay {
-    display: none;
 }
 
 .chat-description,
@@ -331,7 +497,7 @@ a {
 }
 
 .chat-form button {
-    align-self: flex-end;
+    align-self: stretch;
     background: var(--accent);
     color: #fff;
     border: none;
@@ -355,99 +521,6 @@ a {
     padding: 24px 0 32px;
 }
 
-@media (max-width: 900px) {
-    .learning-panel {
-        grid-template-columns: 1fr;
-    }
-
-    .tutor-chat {
-        order: -1;
-    }
-}
-
-@media (max-width: 768px) {
-    .learning-panel {
-        position: relative;
-    }
-
-    .chat-open-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .chat-open-button::before {
-        content: '\1F4AC';
-        font-size: 1rem;
-    }
-
-    .tutor-chat {
-        order: initial;
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: auto;
-        width: min(92vw, 360px);
-        max-width: 100%;
-        height: 100dvh;
-        max-height: none;
-        padding: calc(20px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
-        border-radius: 0;
-        border-left: 1px solid #fcd9a3;
-        border-right: none;
-        border-top: none;
-        border-bottom: none;
-        box-shadow: -18px 0 36px rgba(15, 23, 42, 0.25);
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
-        z-index: 1100;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        background: #fffaf0;
-    }
-
-    .tutor-chat.is-open {
-        transform: translateX(0);
-    }
-
-    .chat-close-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .chat-close-button::before {
-        content: '\2715';
-        font-size: 0.85rem;
-    }
-
-    .chat-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.45);
-        z-index: 1090;
-    }
-
-    .chat-overlay.is-active {
-        display: block;
-    }
-
-    .tutor-chat .chat-history {
-        max-height: none;
-        min-height: 0;
-    }
-
-    .tutor-chat .chat-form button {
-        align-self: stretch;
-    }
-
-    body.chat-sidebar-open {
-        overflow: hidden;
-    }
-}
-
 @media (max-width: 600px) {
     .app-header {
         padding: 20px 12px;
@@ -456,4 +529,13 @@ a {
     .panel {
         padding: 20px;
     }
-}
+
+    .learning-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chat-toggle-button {
+        width: 100%;
+        justify-content: center;
+    }
