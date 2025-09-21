@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitButton = form ? form.querySelector('button[type="submit"]') : null;
   const toggleButton = document.getElementById('chat-toggle-button');
   const closeButton = document.getElementById('chat-close-button');
+  const expandButton = document.getElementById('chat-expand-button');
+  const expandLabel = expandButton ? expandButton.querySelector('.chat-expand-label') : null;
+  const expandIcon = expandButton ? expandButton.querySelector('.chat-expand-icon') : null;
   const overlay = document.getElementById('chat-overlay');
   const statusElement = document.getElementById('chat-status');
 
@@ -117,6 +120,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const layoutQuery = window.matchMedia('(min-width: 1024px)');
     let isDesktopLayout = layoutQuery.matches;
+    let isExpanded = false;
+
+    const updateExpandUi = () => {
+      const expanded = isExpanded && isDesktopLayout;
+
+      if (expandButton) {
+        expandButton.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+        expandButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        if (expandLabel) {
+          expandLabel.textContent = expanded ? '元の表示に戻す' : '画面いっぱいに表示';
+        }
+        if (expandIcon) {
+          expandIcon.textContent = expanded ? '⤺' : '⤢';
+        }
+      }
+
+      if (expanded) {
+        chatSection.classList.add('is-expanded');
+        document.body.classList.add('chat-expanded');
+        overlay.classList.add('is-active');
+        overlay.removeAttribute('hidden');
+        overlay.dataset.chatMode = 'expanded';
+        scrollToBottom(historyContainer);
+      } else {
+        chatSection.classList.remove('is-expanded');
+        document.body.classList.remove('chat-expanded');
+        if (overlay.dataset.chatMode === 'expanded') {
+          overlay.classList.remove('is-active');
+          overlay.setAttribute('hidden', 'true');
+          delete overlay.dataset.chatMode;
+        }
+      }
+    };
+
+    const openExpanded = () => {
+      if (!isDesktopLayout || isExpanded) {
+        return;
+      }
+
+      isExpanded = true;
+      updateExpandUi();
+    };
+
+    const closeExpanded = (returnFocus = false) => {
+      if (!isExpanded) {
+        return;
+      }
+
+      isExpanded = false;
+      updateExpandUi();
+
+      if (returnFocus && expandButton) {
+        expandButton.focus();
+      }
+    };
 
     const closeSidebar = (returnFocus = true) => {
       if (isDesktopLayout) {
@@ -172,16 +230,22 @@ document.addEventListener('DOMContentLoaded', () => {
       chatSection.removeAttribute('inert');
       overlay.classList.remove('is-active');
       overlay.setAttribute('hidden', 'true');
+      delete overlay.dataset.chatMode;
       document.body.classList.remove('chat-sidebar-open');
       toggleButton.setAttribute('aria-expanded', 'true');
       toggleButton.setAttribute('hidden', 'true');
+      updateExpandUi();
     };
 
     const applyMobileLayout = () => {
+      if (isExpanded) {
+        closeExpanded(false);
+      }
       isDesktopLayout = false;
       document.body.classList.remove('chat-desktop');
       toggleButton.removeAttribute('hidden');
       closeSidebar(false);
+      updateExpandUi();
     };
 
     const handleLayoutChange = (event) => {
@@ -199,21 +263,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     toggleButton.addEventListener('click', toggleSidebar);
+    if (expandButton) {
+      expandButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (!isDesktopLayout) {
+          return;
+        }
+
+        if (isExpanded) {
+          closeExpanded(false);
+        } else {
+          openExpanded();
+        }
+      });
+    }
     closeButton.addEventListener('click', () => {
       if (!isDesktopLayout) {
         closeSidebar(true);
+      } else if (isExpanded) {
+        closeExpanded(true);
       }
     });
     overlay.addEventListener('click', () => {
       if (!isDesktopLayout) {
         closeSidebar(true);
+      } else if (isExpanded) {
+        closeExpanded(true);
       }
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && chatSection.classList.contains('is-open') && !isDesktopLayout) {
-        event.preventDefault();
-        closeSidebar(true);
+      if (event.key === 'Escape') {
+        if (chatSection.classList.contains('is-open') && !isDesktopLayout) {
+          event.preventDefault();
+          closeSidebar(true);
+        } else if (isDesktopLayout && isExpanded) {
+          event.preventDefault();
+          closeExpanded(true);
+        }
       }
     });
 
