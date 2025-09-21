@@ -35,12 +35,17 @@ if ($selectedSubject !== null && $unitId !== null && $unitId !== '') {
     }
 }
 
-$pageTitle = 'Personal Tutor 学習ルーム';
+$pageTitle = 'Personal Tutor 教科と単元の選択';
 if ($selectedSubject !== null) {
     $pageTitle = $selectedSubject['name'] . ' - ' . $pageTitle;
 }
 if ($selectedUnit !== null) {
     $pageTitle = $selectedUnit['name'] . ' - ' . $pageTitle;
+}
+
+$startUrl = null;
+if ($selectedSubject !== null && $selectedUnit !== null) {
+    $startUrl = 'learn.php?subject=' . rawurlencode($selectedSubject['id']) . '&unit=' . rawurlencode($selectedUnit['id']);
 }
 ?>
 <!DOCTYPE html>
@@ -97,81 +102,27 @@ if ($selectedUnit !== null) {
         </section>
     <?php endif; ?>
 
-    <?php if ($selectedSubject !== null && $selectedUnit !== null): ?>
-        <section class="panel learning-panel">
-            <div class="learning-content">
-                <h2>3. 学習コンテンツ (<?= h($selectedUnit['name']) ?>)</h2>
-                <button type="button" class="chat-open-button" id="chat-open-button" aria-controls="chat-section" aria-expanded="false">
-                    家庭教師チャットを開く
-                </button>
-                <?php if (!empty($selectedUnit['goals']) && is_array($selectedUnit['goals'])): ?>
-                    <div class="goals">
-                        <h3>学習のめあて</h3>
-                        <ul>
-                            <?php foreach ($selectedUnit['goals'] as $goal): ?>
-                                <li><?= h($goal) ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                <?php endif; ?>
-
-                <div class="explanation">
-                    <h3>解説</h3>
-                    <div class="explanation-body">
-                        <?= $selectedUnit['explanation'] ?? '<p>解説が登録されていません。</p>' ?>
-                    </div>
-                </div>
-
-                <?php if (!empty($selectedUnit['exercises']) && is_array($selectedUnit['exercises'])): ?>
-                    <div class="exercises">
-                        <h3>問題に挑戦</h3>
-                        <ol>
-                            <?php foreach ($selectedUnit['exercises'] as $exercise): ?>
-                                <li>
-                                    <h4><?= h($exercise['title'] ?? '問題') ?></h4>
-                                    <p><?= nl2br(h($exercise['question'] ?? '')) ?></p>
-                                    <?php if (!empty($exercise['hint'])): ?>
-                                        <details>
-                                            <summary>ヒントを見る</summary>
-                                            <p><?= nl2br(h($exercise['hint'])) ?></p>
-                                        </details>
-                                    <?php endif; ?>
-                                    <?php if (!empty($exercise['answer'])): ?>
-                                        <details>
-                                            <summary>答えを見る</summary>
-                                            <p><?= nl2br(h($exercise['answer'])) ?></p>
-                                        </details>
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ol>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <aside class="tutor-chat" id="chat-section" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>" tabindex="-1" aria-labelledby="tutor-chat-title">
-                <div class="chat-header">
-                    <h2 id="tutor-chat-title">4. 家庭教師に質問しよう</h2>
-                    <button type="button" class="chat-close-button" id="chat-close-button">閉じる</button>
-                </div>
-                <p class="chat-description">分からないことがあれば、メッセージを送ってみましょう。学習中の内容を踏まえてヒントや解説が返ってきます。</p>
-                <div id="chat-history" class="chat-history" aria-live="polite"></div>
-                <form id="tutor-form" class="chat-form">
-                    <label for="question">質問を入力</label>
-                    <textarea id="question" name="question" rows="3" placeholder="例: 通分の方法をもう一度教えてください"></textarea>
-                    <button type="submit">送信</button>
-                </form>
-                <p class="chat-note">※ OpenAI API を利用して回答します。API キーが設定されていない場合はデモ応答になります。</p>
-            </aside>
-            <div class="chat-overlay" id="chat-overlay" hidden></div>
+    <?php if ($selectedSubject !== null && $selectedUnit !== null && $startUrl !== null): ?>
+        <section class="panel start-panel">
+            <h2>3. 学習を始めよう</h2>
+            <p class="start-panel__summary">
+                選択中: <strong><?= h($selectedSubject['name']) ?></strong> / <strong><?= h($selectedUnit['name']) ?></strong>
+            </p>
+            <?php if (!empty($selectedUnit['grade'])): ?>
+                <p class="start-panel__meta">対象: <?= h($selectedUnit['grade']) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($selectedUnit['overview'])): ?>
+                <p class="start-panel__overview"><?= h($selectedUnit['overview']) ?></p>
+            <?php endif; ?>
+            <a class="primary-button" href="<?= h($startUrl) ?>">学習ルームを開く</a>
         </section>
     <?php elseif ($selectedSubject !== null): ?>
-        <section class="panel">
+        <section class="panel info-panel">
             <p>学習を始める単元を選んでください。</p>
         </section>
     <?php else: ?>
-        <section class="panel">
-            <p>興味のある教科を選ぶと、単元と学習コンテンツが表示されます。</p>
+        <section class="panel info-panel">
+            <p>興味のある教科を選ぶと、単元と学習コンテンツの一覧が表示されます。</p>
         </section>
     <?php endif; ?>
 </main>
