@@ -121,7 +121,7 @@ function buildChatMessages(string $contextText, $history, string $question): arr
 function requestOpenAi(string $apiKey, array $messages): string
 {
     $payload = json_encode([
-        'model' => 'gpt-3.5-turbo',
+        'model' => 'gpt-5-nano',
         'messages' => $messages,
         'temperature' => 0.7,
         'max_tokens' => 512,
