@@ -142,7 +142,6 @@ if ($selectedUnit !== null) {
             <textarea id="question" name="question" rows="3" placeholder="例: 通分の方法をもう一度教えてください"></textarea>
             <button type="submit">送信</button>
         </form>
-        <p class="chat-note">※ OpenAI API を利用して回答します。API キーが設定されていない場合はデモ応答になります。</p>
     </aside>
     <div class="chat-overlay" id="chat-overlay" hidden></div>
 <?php endif; ?>

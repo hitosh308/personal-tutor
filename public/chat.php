@@ -201,6 +201,8 @@ function requestOpenAi(string $apiKey, array $messages): string
         throw new RuntimeException('OpenAI API から有効な回答が得られませんでした。' . "\n" . $debugInfo);
     }
 
+    logOpenAiPrompt($payloadData, $answer, $decoded);
+
     return $answer;
 }
 
@@ -222,6 +224,60 @@ function formatOpenAiDebugInfo(string $message, array $context = []): string
     }
 
     return trim(implode("\n", $lines));
+}
+
+function logOpenAiPrompt(array $payloadData, string $answer, array $responseData): void
+{
+    $logDirectory = __DIR__ . '/../data/logs';
+
+    if (!is_dir($logDirectory)) {
+        if (!mkdir($logDirectory, 0775, true) && !is_dir($logDirectory)) {
+            return;
+        }
+    }
+
+    $messages = [];
+    if (isset($payloadData['messages']) && is_array($payloadData['messages'])) {
+        foreach ($payloadData['messages'] as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+
+            $messages[] = [
+                'role' => (string) ($message['role'] ?? ''),
+                'content' => (string) ($message['content'] ?? ''),
+            ];
+        }
+    }
+
+    $entry = [
+        'timestamp' => date('c'),
+        'request' => [
+            'model' => $payloadData['model'] ?? null,
+            'max_completion_tokens' => $payloadData['max_completion_tokens'] ?? null,
+            'messages' => $messages,
+        ],
+        'response' => [
+            'answer' => $answer,
+        ],
+    ];
+
+    if (isset($responseData['id'])) {
+        $entry['response']['id'] = $responseData['id'];
+    }
+
+    if (isset($responseData['usage'])) {
+        $entry['response']['usage'] = $responseData['usage'];
+    }
+
+    $encoded = json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    if ($encoded === false) {
+        return;
+    }
+
+    $logFile = $logDirectory . '/openai_prompts.log';
+    @file_put_contents($logFile, $encoded . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
 function buildFallbackResponse(array $subject, array $unit, string $question, string $contextText): array
