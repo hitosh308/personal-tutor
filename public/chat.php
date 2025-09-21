@@ -129,7 +129,7 @@ function requestOpenAi(string $apiKey, array $messages): string
         'model' => 'gpt-5-nano',
         'messages' => $messages,
         'temperature' => 0.7,
-        'max_tokens' => 512,
+        'max_completion_tokens' => 512,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     if ($payload === false) {
