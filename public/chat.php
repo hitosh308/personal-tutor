@@ -187,7 +187,7 @@ function requestOpenAi(string $apiKey, array $messages): string
     $payloadData = [
         'model' => 'gpt-5-nano',
         'input' => $inputMessages,
-        'max_output_tokens' => 512,
+        'max_output_tokens' => 2048,
     ];
 
     $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
