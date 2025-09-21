@@ -22,8 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupSidebarToggle();
 
-  appendBubble('system', '学習中の内容に関して聞きたいことがあれば、メッセージを送ってください。');
-
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const question = textarea.value.trim();
