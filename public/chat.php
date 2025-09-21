@@ -69,14 +69,15 @@ try {
         'source' => 'openai'
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
-    logOpenAiFailure('Failed to obtain response from OpenAI.', [
+    $debugInfo = formatOpenAiDebugInfo('Failed to obtain response from OpenAI.', [
         'exception' => get_class($e),
         'message' => $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
     ]);
     http_response_code(500);
     echo json_encode([
         'error' => '家庭教師からの返信に失敗しました。',
-        'details' => $e->getMessage()
+        'details' => $debugInfo
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
@@ -132,16 +133,16 @@ function requestOpenAi(string $apiKey, array $messages): string
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     if ($payload === false) {
-        logOpenAiFailure('Failed to encode request payload for OpenAI API.', [
+        $debugInfo = formatOpenAiDebugInfo('Failed to encode request payload for OpenAI API.', [
             'messages_count' => count($messages),
         ]);
-        throw new RuntimeException('リクエストの作成に失敗しました。');
+        throw new RuntimeException('リクエストの作成に失敗しました。' . "\n" . $debugInfo);
     }
 
     $ch = curl_init('https://api.openai.com/v1/chat/completions');
     if ($ch === false) {
-        logOpenAiFailure('Failed to initialize cURL for OpenAI API request.');
-        throw new RuntimeException('リクエストの初期化に失敗しました。');
+        $debugInfo = formatOpenAiDebugInfo('Failed to initialize cURL for OpenAI API request.');
+        throw new RuntimeException('リクエストの初期化に失敗しました。' . "\n" . $debugInfo);
     }
 
     curl_setopt_array($ch, [
@@ -160,12 +161,12 @@ function requestOpenAi(string $apiKey, array $messages): string
     if ($rawResponse === false) {
         $error = curl_error($ch) ?: 'Unknown error';
         $errno = curl_errno($ch);
-        logOpenAiFailure('cURL execution for OpenAI API failed.', [
+        $debugInfo = formatOpenAiDebugInfo('cURL execution for OpenAI API failed.', [
             'curl_error' => $error,
             'curl_errno' => $errno,
         ]);
         curl_close($ch);
-        throw new RuntimeException('OpenAI API の呼び出しに失敗しました: ' . $error);
+        throw new RuntimeException('OpenAI API の呼び出しに失敗しました: ' . $error . "\n" . $debugInfo);
     }
 
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -173,49 +174,53 @@ function requestOpenAi(string $apiKey, array $messages): string
 
     $decoded = json_decode($rawResponse, true);
     if (!is_array($decoded)) {
-        logOpenAiFailure('Failed to decode OpenAI API response.', [
+        $debugInfo = formatOpenAiDebugInfo('Failed to decode OpenAI API response.', [
             'status_code' => $statusCode,
             'raw_response' => $rawResponse,
         ]);
-        throw new RuntimeException('OpenAI API のレスポンスが解析できませんでした。');
+        throw new RuntimeException('OpenAI API のレスポンスが解析できませんでした。' . "\n" . $debugInfo);
     }
 
     if ($statusCode >= 400) {
         $errorMessage = $decoded['error']['message'] ?? 'Unexpected error';
-        logOpenAiFailure('OpenAI API returned an error response.', [
+        $debugInfo = formatOpenAiDebugInfo('OpenAI API returned an error response.', [
             'status_code' => $statusCode,
             'error' => $decoded['error'] ?? null,
             'raw_response' => $rawResponse,
         ]);
-        throw new RuntimeException('OpenAI API エラー: ' . $errorMessage);
+        throw new RuntimeException('OpenAI API エラー: ' . $errorMessage . "\n" . $debugInfo);
     }
 
     $answer = $decoded['choices'][0]['message']['content'] ?? '';
     if ($answer === '') {
-        logOpenAiFailure('OpenAI API response did not contain an answer.', [
+        $debugInfo = formatOpenAiDebugInfo('OpenAI API response did not contain an answer.', [
             'status_code' => $statusCode,
             'decoded_response' => $decoded,
         ]);
-        throw new RuntimeException('OpenAI API から有効な回答が得られませんでした。');
+        throw new RuntimeException('OpenAI API から有効な回答が得られませんでした。' . "\n" . $debugInfo);
     }
 
     return $answer;
 }
 
-function logOpenAiFailure(string $message, array $context = []): void
+function formatOpenAiDebugInfo(string $message, array $context = []): string
 {
-    $logMessage = '[OpenAI][error] ' . $message;
+    $lines = ['[OpenAI][error] ' . $message];
 
     if ($context !== []) {
-        $encodedContext = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $encodedContext = json_encode(
+            $context,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+        );
+
         if ($encodedContext !== false) {
-            $logMessage .= ' | context: ' . $encodedContext;
+            $lines[] = 'Context: ' . $encodedContext;
         } else {
-            $logMessage .= ' | context: ' . print_r($context, true);
+            $lines[] = 'Context: ' . print_r($context, true);
         }
     }
 
-    error_log($logMessage);
+    return trim(implode("\n", $lines));
 }
 
 function buildFallbackResponse(array $subject, array $unit, string $question, string $contextText): array
