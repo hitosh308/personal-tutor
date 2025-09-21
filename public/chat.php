@@ -125,12 +125,13 @@ function buildChatMessages(string $contextText, $history, string $question): arr
 
 function requestOpenAi(string $apiKey, array $messages): string
 {
-    $payload = json_encode([
+    $payloadData = [
         'model' => 'gpt-5-nano',
         'messages' => $messages,
-        'temperature' => 0.7,
         'max_completion_tokens' => 512,
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    ];
+
+    $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     if ($payload === false) {
         $debugInfo = formatOpenAiDebugInfo('Failed to encode request payload for OpenAI API.', [
