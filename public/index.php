@@ -101,6 +101,9 @@ if ($selectedUnit !== null) {
         <section class="panel learning-panel">
             <div class="learning-content">
                 <h2>3. 学習コンテンツ (<?= h($selectedUnit['name']) ?>)</h2>
+                <button type="button" class="chat-open-button" id="chat-open-button" aria-controls="chat-section" aria-expanded="false">
+                    家庭教師チャットを開く
+                </button>
                 <?php if (!empty($selectedUnit['goals']) && is_array($selectedUnit['goals'])): ?>
                     <div class="goals">
                         <h3>学習のめあて</h3>
@@ -146,8 +149,11 @@ if ($selectedUnit !== null) {
                 <?php endif; ?>
             </div>
 
-            <aside class="tutor-chat" id="chat-section" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>">
-                <h2>4. 家庭教師に質問しよう</h2>
+            <aside class="tutor-chat" id="chat-section" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>" tabindex="-1" aria-labelledby="tutor-chat-title">
+                <div class="chat-header">
+                    <h2 id="tutor-chat-title">4. 家庭教師に質問しよう</h2>
+                    <button type="button" class="chat-close-button" id="chat-close-button">閉じる</button>
+                </div>
                 <p class="chat-description">分からないことがあれば、メッセージを送ってみましょう。学習中の内容を踏まえてヒントや解説が返ってきます。</p>
                 <div id="chat-history" class="chat-history" aria-live="polite"></div>
                 <form id="tutor-form" class="chat-form">
@@ -157,6 +163,7 @@ if ($selectedUnit !== null) {
                 </form>
                 <p class="chat-note">※ OpenAI API を利用して回答します。API キーが設定されていない場合はデモ応答になります。</p>
             </aside>
+            <div class="chat-overlay" id="chat-overlay" hidden></div>
         </section>
     <?php elseif ($selectedSubject !== null): ?>
         <section class="panel">
