@@ -65,9 +65,10 @@ if ($selectedUnit !== null) {
             <p><a class="link-button" href="./">教科と単元の選択に戻る</a></p>
         </section>
     <?php else: ?>
-        <section class="panel learning-panel">
-            <div class="learning-content">
-                <div class="learning-header">
+        <div class="learning-layout">
+            <section class="panel learning-panel">
+                <div class="learning-content">
+                    <div class="learning-header">
                     <div class="learning-heading">
                         <p class="learning-return"><a class="link-button" href="./">教科と単元の選択に戻る</a></p>
                         <h2><?= h($selectedUnit['name']) ?></h2>
@@ -127,22 +128,26 @@ if ($selectedUnit !== null) {
                 <?php endif; ?>
             </div>
         </section>
+        <?php if ($selectedSubject !== null && $selectedUnit !== null): ?>
+            <aside class="tutor-chat" id="chat-section" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>" tabindex="-1" aria-labelledby="tutor-chat-title" aria-hidden="true" inert>
+                <div class="chat-header">
+                    <h2 id="tutor-chat-title">家庭教師に質問しよう</h2>
+                    <button type="button" class="chat-close-button" id="chat-close-button">閉じる</button>
+                </div>
+                <p class="chat-description">分からないことがあれば、メッセージを送ってみましょう。学習中の内容を踏まえてヒントや解説が返ってきます。</p>
+                <p id="chat-status" class="chat-status" role="status" aria-live="polite" hidden></p>
+                <div id="chat-history" class="chat-history" aria-live="polite"></div>
+                <form id="tutor-form" class="chat-form">
+                    <label for="question">質問を入力</label>
+                    <textarea id="question" name="question" rows="3" placeholder="例: 通分の方法をもう一度教えてください"></textarea>
+                    <button type="submit">送信</button>
+                </form>
+            </aside>
+        <?php endif; ?>
+        </div>
     <?php endif; ?>
 </main>
 <?php if ($message === null && $selectedSubject !== null && $selectedUnit !== null): ?>
-    <aside class="tutor-chat" id="chat-section" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>" tabindex="-1" aria-labelledby="tutor-chat-title" aria-hidden="true" inert>
-        <div class="chat-header">
-            <h2 id="tutor-chat-title">家庭教師に質問しよう</h2>
-            <button type="button" class="chat-close-button" id="chat-close-button">閉じる</button>
-        </div>
-        <p class="chat-description">分からないことがあれば、メッセージを送ってみましょう。学習中の内容を踏まえてヒントや解説が返ってきます。</p>
-        <div id="chat-history" class="chat-history" aria-live="polite"></div>
-        <form id="tutor-form" class="chat-form">
-            <label for="question">質問を入力</label>
-            <textarea id="question" name="question" rows="3" placeholder="例: 通分の方法をもう一度教えてください"></textarea>
-            <button type="submit">送信</button>
-        </form>
-    </aside>
     <div class="chat-overlay" id="chat-overlay" hidden></div>
 <?php endif; ?>
 <footer class="app-footer">

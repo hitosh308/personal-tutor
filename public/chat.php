@@ -192,8 +192,8 @@ function requestOpenAi(string $apiKey, array $messages): string
         throw new RuntimeException('OpenAI API エラー: ' . $errorMessage . "\n" . $debugInfo);
     }
 
-    $answer = $decoded['choices'][0]['message']['content'] ?? '';
-    if ($answer === '') {
+    $answer = extractOpenAiAnswer($decoded);
+    if ($answer === null) {
         $debugInfo = formatOpenAiDebugInfo('OpenAI API response did not contain an answer.', [
             'status_code' => $statusCode,
             'decoded_response' => $decoded,
@@ -204,6 +204,83 @@ function requestOpenAi(string $apiKey, array $messages): string
     logOpenAiPrompt($payloadData, $answer, $decoded);
 
     return $answer;
+}
+
+function extractOpenAiAnswer(array $response): ?string
+{
+    if (!isset($response['choices']) || !is_array($response['choices'])) {
+        return null;
+    }
+
+    foreach ($response['choices'] as $choice) {
+        if (!is_array($choice)) {
+            continue;
+        }
+
+        $message = $choice['message'] ?? null;
+        if (!is_array($message)) {
+            continue;
+        }
+
+        $content = $message['content'] ?? null;
+        $text = normalizeOpenAiContent($content);
+        if ($text !== null) {
+            return $text;
+        }
+
+        if (isset($message['refusal']) && is_string($message['refusal'])) {
+            $refusal = trim($message['refusal']);
+            if ($refusal !== '') {
+                return $refusal;
+            }
+        }
+    }
+
+    return null;
+}
+
+function normalizeOpenAiContent(mixed $content): ?string
+{
+    if (is_string($content)) {
+        return trim($content) === '' ? null : $content;
+    }
+
+    if (!is_array($content)) {
+        return null;
+    }
+
+    $parts = [];
+
+    foreach ($content as $part) {
+        if (is_string($part)) {
+            $parts[] = $part;
+            continue;
+        }
+
+        if (!is_array($part)) {
+            continue;
+        }
+
+        if (isset($part['text']) && is_string($part['text'])) {
+            $parts[] = $part['text'];
+            continue;
+        }
+
+        if (isset($part['content'])) {
+            $nested = normalizeOpenAiContent($part['content']);
+            if ($nested !== null) {
+                $parts[] = $nested;
+            }
+        }
+    }
+
+    if ($parts === []) {
+        return null;
+    }
+
+    $joined = implode('', $parts);
+
+    return trim($joined) === '' ? null : $joined;
 }
 
 function formatOpenAiDebugInfo(string $message, array $context = []): string

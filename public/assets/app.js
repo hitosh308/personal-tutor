@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleButton = document.getElementById('chat-toggle-button');
   const closeButton = document.getElementById('chat-close-button');
   const overlay = document.getElementById('chat-overlay');
+  const statusElement = document.getElementById('chat-status');
 
   if (!subjectId || !unitId || !form || !textarea || !historyContainer || !submitButton) {
     return;
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       history: conversation.slice(),
     };
 
+    setStatusMessage('');
     setFormDisabled(true);
     const pendingBubble = appendBubble('system', '家庭教師が考えています…');
 
@@ -56,27 +58,45 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        removeBubble(pendingBubble);
+        setStatusMessage('回答の解析に失敗しました。時間をおいて再度お試しください。', 'error');
+        console.error('Failed to parse chat response', parseError);
+        return;
+      }
 
       if (!response.ok || data.error) {
-        const message = data.error || 'エラーが発生しました。時間をおいて再度お試しください。';
-        const detail = typeof data.details === 'string' ? data.details.trim() : '';
-        const composedMessage = detail ? `${message}\n${detail}` : message;
-        pendingBubble.className = 'chat-bubble system';
-        pendingBubble.textContent = composedMessage;
+        removeBubble(pendingBubble);
+        const message = typeof data.error === 'string' && data.error.trim() !== ''
+          ? data.error.trim()
+          : 'エラーが発生しました。時間をおいて再度お試しください。';
+        setStatusMessage(message, 'error');
+        if (typeof data.details === 'string' && data.details.trim() !== '') {
+          console.error('[PersonalTutor][chat] OpenAI error details:', data.details);
+        }
+        return;
+      }
+
+      const answer = typeof data.answer === 'string' ? data.answer : '';
+      if (answer.trim() === '') {
+        removeBubble(pendingBubble);
+        setStatusMessage('回答を取得できませんでした。時間をおいて再度お試しください。', 'error');
         return;
       }
 
       pendingBubble.className = 'chat-bubble assistant';
-      pendingBubble.textContent = data.answer || '回答を取得できませんでした。';
+      pendingBubble.textContent = answer;
+      setStatusMessage('');
 
       conversation.push({ role: 'user', content: question });
-      if (data.answer) {
-        conversation.push({ role: 'assistant', content: data.answer });
-      }
+      conversation.push({ role: 'assistant', content: answer });
     } catch (error) {
-      pendingBubble.className = 'chat-bubble system';
-      pendingBubble.textContent = '通信に失敗しました。ネットワーク環境を確認してください。';
+      removeBubble(pendingBubble);
+      setStatusMessage('通信に失敗しました。ネットワーク環境を確認してください。', 'error');
+      console.error('[PersonalTutor][chat] request failed:', error);
     } finally {
       setFormDisabled(false);
       scrollToBottom(historyContainer);
@@ -95,7 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const layoutQuery = window.matchMedia('(min-width: 1024px)');
+    let isDesktopLayout = layoutQuery.matches;
+
     const closeSidebar = (returnFocus = true) => {
+      if (isDesktopLayout) {
+        return;
+      }
+
       chatSection.classList.remove('is-open');
       overlay.classList.remove('is-active');
       overlay.setAttribute('hidden', 'true');
@@ -110,6 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const openSidebar = () => {
+      if (isDesktopLayout) {
+        return;
+      }
+
       chatSection.classList.add('is-open');
       overlay.classList.add('is-active');
       overlay.removeAttribute('hidden');
@@ -122,6 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const toggleSidebar = () => {
+      if (isDesktopLayout) {
+        return;
+      }
+
       if (chatSection.classList.contains('is-open')) {
         closeSidebar(true);
       } else {
@@ -129,18 +164,64 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
+    const applyDesktopLayout = () => {
+      isDesktopLayout = true;
+      document.body.classList.add('chat-desktop');
+      chatSection.classList.add('is-open');
+      chatSection.removeAttribute('aria-hidden');
+      chatSection.removeAttribute('inert');
+      overlay.classList.remove('is-active');
+      overlay.setAttribute('hidden', 'true');
+      document.body.classList.remove('chat-sidebar-open');
+      toggleButton.setAttribute('aria-expanded', 'true');
+      toggleButton.setAttribute('hidden', 'true');
+    };
+
+    const applyMobileLayout = () => {
+      isDesktopLayout = false;
+      document.body.classList.remove('chat-desktop');
+      toggleButton.removeAttribute('hidden');
+      closeSidebar(false);
+    };
+
+    const handleLayoutChange = (event) => {
+      if (event.matches) {
+        applyDesktopLayout();
+      } else {
+        applyMobileLayout();
+      }
+    };
+
+    if (typeof layoutQuery.addEventListener === 'function') {
+      layoutQuery.addEventListener('change', handleLayoutChange);
+    } else if (typeof layoutQuery.addListener === 'function') {
+      layoutQuery.addListener(handleLayoutChange);
+    }
+
     toggleButton.addEventListener('click', toggleSidebar);
-    closeButton.addEventListener('click', () => closeSidebar(true));
-    overlay.addEventListener('click', () => closeSidebar(true));
+    closeButton.addEventListener('click', () => {
+      if (!isDesktopLayout) {
+        closeSidebar(true);
+      }
+    });
+    overlay.addEventListener('click', () => {
+      if (!isDesktopLayout) {
+        closeSidebar(true);
+      }
+    });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && chatSection.classList.contains('is-open')) {
+      if (event.key === 'Escape' && chatSection.classList.contains('is-open') && !isDesktopLayout) {
         event.preventDefault();
         closeSidebar(true);
       }
     });
 
-    closeSidebar(false);
+    if (isDesktopLayout) {
+      applyDesktopLayout();
+    } else {
+      applyMobileLayout();
+    }
   }
 
   function appendBubble(role, text) {
@@ -152,8 +233,42 @@ document.addEventListener('DOMContentLoaded', () => {
     return bubble;
   }
 
+  function removeBubble(bubble) {
+    if (bubble && bubble.parentNode) {
+      bubble.parentNode.removeChild(bubble);
+    }
+  }
+
   function scrollToBottom(element) {
     element.scrollTop = element.scrollHeight;
+  }
+
+  function setStatusMessage(message, type = 'info') {
+    if (!statusElement) {
+      return;
+    }
+
+    if (!message) {
+      statusElement.textContent = '';
+      statusElement.classList.remove('is-error');
+      statusElement.setAttribute('role', 'status');
+      statusElement.setAttribute('aria-live', 'polite');
+      statusElement.hidden = true;
+      return;
+    }
+
+    if (type === 'error') {
+      statusElement.classList.add('is-error');
+      statusElement.setAttribute('role', 'alert');
+      statusElement.setAttribute('aria-live', 'assertive');
+    } else {
+      statusElement.classList.remove('is-error');
+      statusElement.setAttribute('role', 'status');
+      statusElement.setAttribute('aria-live', 'polite');
+    }
+
+    statusElement.textContent = message;
+    statusElement.hidden = false;
   }
 
   function setFormDisabled(disabled) {
