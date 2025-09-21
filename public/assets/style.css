@@ -430,10 +430,30 @@ body.chat-desktop .tutor-chat.is-open {
     transform: none;
 }
 
+body.chat-desktop .tutor-chat.is-expanded {
+    position: fixed;
+    top: max(16px, calc(env(safe-area-inset-top) + 16px));
+    right: max(16px, calc(env(safe-area-inset-right) + 16px));
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 16px));
+    left: max(16px, calc(env(safe-area-inset-left) + 16px));
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    padding: calc(28px + env(safe-area-inset-top)) calc(32px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(32px + env(safe-area-inset-left));
+    border-radius: 24px;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.45);
+    z-index: 1600;
+    overflow-y: auto;
+}
+
 body.chat-desktop .chat-toggle-button,
-body.chat-desktop .chat-close-button,
-body.chat-desktop .chat-overlay {
+body.chat-desktop .chat-close-button {
     display: none !important;
+}
+
+body.chat-desktop .chat-overlay {
+    display: none;
 }
 
 .chat-overlay {
@@ -448,6 +468,19 @@ body.chat-desktop .chat-overlay {
     display: block;
 }
 
+body.chat-desktop .chat-expand-button {
+    display: inline-flex;
+}
+
+body.chat-desktop.chat-expanded .chat-overlay.is-active {
+    display: block !important;
+    z-index: 1500;
+}
+
+body.chat-expanded {
+    overflow: hidden;
+}
+
 body.chat-sidebar-open {
     overflow: hidden;
 }
@@ -459,8 +492,54 @@ body.chat-sidebar-open {
     gap: 12px;
 }
 
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .chat-header h2 {
     margin: 0;
+}
+
+.chat-expand-button {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid transparent;
+    color: #8b5c11;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.chat-expand-button:hover {
+    background: rgba(245, 199, 125, 0.2);
+}
+
+.chat-expand-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.chat-expand-button[aria-pressed="true"] {
+    background: rgba(245, 199, 125, 0.4);
+    color: #5c3b05;
+}
+
+.chat-expand-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.chat-expand-button[aria-pressed="true"] .chat-expand-icon {
+    transform: rotate(-45deg);
 }
 
 .chat-close-button {
@@ -489,6 +568,10 @@ body.chat-sidebar-open {
 .chat-close-button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+}
+
+.chat-header-actions .chat-close-button {
+    flex-shrink: 0;
 }
 
 .chat-description {

@@ -132,7 +132,13 @@ if ($selectedUnit !== null) {
             <aside class="tutor-chat" id="chat-section" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>" tabindex="-1" aria-labelledby="tutor-chat-title" aria-hidden="true" inert>
                 <div class="chat-header">
                     <h2 id="tutor-chat-title">家庭教師に質問しよう</h2>
-                    <button type="button" class="chat-close-button" id="chat-close-button">閉じる</button>
+                    <div class="chat-header-actions">
+                        <button type="button" class="chat-expand-button" id="chat-expand-button" aria-pressed="false" aria-expanded="false">
+                            <span class="chat-expand-icon" aria-hidden="true">⤢</span>
+                            <span class="chat-expand-label">画面いっぱいに表示</span>
+                        </button>
+                        <button type="button" class="chat-close-button" id="chat-close-button">閉じる</button>
+                    </div>
                 </div>
                 <p class="chat-description">分からないことがあれば、メッセージを送ってみましょう。学習中の内容を踏まえてヒントや解説が返ってきます。</p>
                 <p id="chat-status" class="chat-status" role="status" aria-live="polite" hidden></p>
