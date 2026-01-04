@@ -29,9 +29,9 @@ $subjectId = isset($payload['subject']) ? (string) $payload['subject'] : '';
 $unitId = isset($payload['unit']) ? (string) $payload['unit'] : '';
 $history = $payload['history'] ?? [];
 
-if ($question === '' || $gradeId === '' || $subjectId === '' || $unitId === '') {
+if ($question === '') {
     http_response_code(400);
-    echo json_encode(['error' => '学年・教科・単元・質問は必須です。'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => '質問を入力してください。'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -44,12 +44,26 @@ try {
 }
 
 $grade = $repository->findGrade($gradeId);
+if ($grade === null) {
+    $grades = $repository->getGrades();
+    $grade = $grades[0] ?? null;
+}
+
 $subject = $grade ? $repository->findSubject($subjectId, $grade['id']) : null;
-$unit = $subject ? $repository->findUnit($subjectId, $unitId, $grade['id'] ?? null) : null;
+if ($subject === null && $grade !== null) {
+    $subjects = $repository->getSubjects($grade['id']);
+    $subject = $subjects[0] ?? null;
+}
+
+$unit = $subject ? $repository->findUnit($subject['id'], $unitId, $grade['id'] ?? null) : null;
+if ($unit === null && $subject !== null) {
+    $units = $repository->getUnits($subject['id'], $grade['id'] ?? null);
+    $unit = $units[0] ?? null;
+}
 
 if ($grade === null || $subject === null || $unit === null) {
     http_response_code(404);
-    echo json_encode(['error' => '指定された教材が見つかりません。'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => '利用できる教材が見つかりません。'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
