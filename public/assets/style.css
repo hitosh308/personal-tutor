@@ -98,6 +98,39 @@ a {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
 }
+.grade-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.grade-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.grade-group__title {
+    margin: 0;
+    font-size: 1rem;
+    color: #425375;
+    border-left: 4px solid var(--accent);
+    padding-left: 10px;
+}
+
+.grade-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.subjects-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 960px) {
+    .subjects-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+}
 
 .card {
     display: block;
