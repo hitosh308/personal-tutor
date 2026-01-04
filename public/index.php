@@ -13,6 +13,14 @@ function h(?string $value): string
 
 $repository = new ContentRepository(__DIR__ . '/../data/grades');
 $grades = $repository->getGrades();
+$elementaryGrades = array_values(array_filter(
+    $grades,
+    static fn (array $grade): bool => str_starts_with((string) ($grade['id'] ?? ''), 'elementary-')
+));
+$middleGrades = array_values(array_filter(
+    $grades,
+    static fn (array $grade): bool => str_starts_with((string) ($grade['id'] ?? ''), 'middle-')
+));
 
 $gradeId = isset($_GET['grade']) ? (string) $_GET['grade'] : null;
 $subjectId = isset($_GET['subject']) ? (string) $_GET['subject'] : null;
@@ -89,14 +97,31 @@ if ($selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== nu
 
     <section class="panel">
         <h2>1. 学年を選ぼう</h2>
-        <div class="card-grid">
-            <?php foreach ($grades as $grade): ?>
-                <?php $isActiveGrade = $selectedGrade !== null && $grade['id'] === $selectedGrade['id']; ?>
-                <a class="card <?= $isActiveGrade ? 'is-active' : '' ?>" href="?grade=<?= h($grade['id']) ?>">
-                    <h3><?= h($grade['name'] ?? $grade['id']) ?></h3>
-                    <p><?= h($grade['description'] ?? '') ?></p>
-                </a>
-            <?php endforeach; ?>
+        <div class="grade-groups">
+            <div class="grade-group">
+                <h3 class="grade-group__title">小学生</h3>
+                <div class="card-grid grade-grid">
+                    <?php foreach ($elementaryGrades as $grade): ?>
+                        <?php $isActiveGrade = $selectedGrade !== null && $grade['id'] === $selectedGrade['id']; ?>
+                        <a class="card <?= $isActiveGrade ? 'is-active' : '' ?>" href="?grade=<?= h($grade['id']) ?>">
+                            <h3><?= h($grade['name'] ?? $grade['id']) ?></h3>
+                            <p><?= h($grade['description'] ?? '') ?></p>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="grade-group">
+                <h3 class="grade-group__title">中学生</h3>
+                <div class="card-grid grade-grid">
+                    <?php foreach ($middleGrades as $grade): ?>
+                        <?php $isActiveGrade = $selectedGrade !== null && $grade['id'] === $selectedGrade['id']; ?>
+                        <a class="card <?= $isActiveGrade ? 'is-active' : '' ?>" href="?grade=<?= h($grade['id']) ?>">
+                            <h3><?= h($grade['name'] ?? $grade['id']) ?></h3>
+                            <p><?= h($grade['description'] ?? '') ?></p>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -106,12 +131,11 @@ if ($selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== nu
             <?php if ($subjects === []): ?>
                 <p>この学年の教科はまだ登録されていません。</p>
             <?php else: ?>
-                <div class="card-grid">
+                <div class="card-grid subjects-grid">
                     <?php foreach ($subjects as $subject): ?>
                         <?php $isActiveSubject = $selectedSubject !== null && $subject['id'] === $selectedSubject['id']; ?>
                         <a class="card <?= $isActiveSubject ? 'is-active' : '' ?>" href="?grade=<?= h($selectedGrade['id']) ?>&amp;subject=<?= h($subject['id']) ?>">
                             <h3><?= h($subject['name'] ?? $subject['id']) ?></h3>
-                            <p><?= h($subject['description'] ?? '') ?></p>
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -130,8 +154,9 @@ if ($selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== nu
                         <?php $isActiveUnit = $selectedUnit !== null && $unit['id'] === $selectedUnit['id']; ?>
                         <a class="card <?= $isActiveUnit ? 'is-active' : '' ?>" href="?grade=<?= h($selectedGrade['id']) ?>&amp;subject=<?= h($selectedSubject['id']) ?>&amp;unit=<?= h($unit['id']) ?>">
                             <h3><?= h($unit['name'] ?? $unit['id']) ?></h3>
-                            <p class="meta">対象: <?= h($unit['grade'] ?? '---') ?></p>
-                            <p><?= h($unit['overview'] ?? '') ?></p>
+                            <?php if (!empty($unit['overview'])): ?>
+                                <p><?= h($unit['overview']) ?></p>
+                            <?php endif; ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -145,12 +170,6 @@ if ($selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== nu
             <p class="start-panel__summary">
                 選択中: <strong><?= h($selectedGrade['name']) ?></strong> / <strong><?= h($selectedSubject['name']) ?></strong> / <strong><?= h($selectedUnit['name']) ?></strong>
             </p>
-            <?php if (!empty($selectedUnit['grade'])): ?>
-                <p class="start-panel__meta">対象: <?= h($selectedUnit['grade']) ?></p>
-            <?php endif; ?>
-            <?php if (!empty($selectedUnit['overview'])): ?>
-                <p class="start-panel__overview"><?= h($selectedUnit['overview']) ?></p>
-            <?php endif; ?>
             <a class="primary-button" href="<?= h($startUrl) ?>">学習ルームを開く</a>
         </section>
     <?php elseif ($selectedGrade !== null && $selectedSubject !== null): ?>
