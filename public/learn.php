@@ -13,28 +13,38 @@ function h(?string $value): string
 
 $repository = new ContentRepository(__DIR__ . '/../data/contents.json');
 
+$gradeId = isset($_GET['grade']) ? (string) $_GET['grade'] : null;
 $subjectId = isset($_GET['subject']) ? (string) $_GET['subject'] : null;
 $unitId = isset($_GET['unit']) ? (string) $_GET['unit'] : null;
 
+$selectedGrade = null;
 $selectedSubject = null;
 $selectedUnit = null;
 $message = null;
 
-if ($subjectId === null || $subjectId === '' || $unitId === null || $unitId === '') {
-    $message = '学習を始めるには、教科と単元を選び直してください。';
+if ($gradeId === null || $gradeId === '' || $subjectId === null || $subjectId === '' || $unitId === null || $unitId === '') {
+    $message = '学習を始めるには、学年・教科・単元を選び直してください。';
 } else {
-    $selectedSubject = $repository->findSubject($subjectId);
-    if ($selectedSubject === null) {
-        $message = '指定された教科が見つかりませんでした。';
+    $selectedGrade = $repository->findGrade($gradeId);
+    if ($selectedGrade === null) {
+        $message = '指定された学年が見つかりませんでした。';
     } else {
-        $selectedUnit = $repository->findUnit($selectedSubject['id'], $unitId);
-        if ($selectedUnit === null) {
-            $message = '指定された単元が見つかりませんでした。';
+        $selectedSubject = $repository->findSubject($subjectId, $gradeId);
+        if ($selectedSubject === null) {
+            $message = '指定された教科が見つかりませんでした。';
+        } else {
+            $selectedUnit = $repository->findUnit($selectedSubject['id'], $unitId, $selectedGrade['id']);
+            if ($selectedUnit === null) {
+                $message = '指定された単元が見つかりませんでした。';
+            }
         }
     }
 }
 
 $pageTitle = 'Personal Tutor 学習ルーム';
+if ($selectedGrade !== null) {
+    $pageTitle = $selectedGrade['name'] . ' - ' . $pageTitle;
+}
 if ($selectedSubject !== null) {
     $pageTitle = $selectedSubject['name'] . ' - ' . $pageTitle;
 }
@@ -62,7 +72,7 @@ if ($selectedUnit !== null) {
         <section class="panel">
             <h2>学習ルームを開けませんでした</h2>
             <p><?= h($message) ?></p>
-            <p><a class="link-button" href="./">教科と単元の選択に戻る</a></p>
+            <p><a class="link-button" href="./">学年・教科・単元の選択に戻る</a></p>
         </section>
     <?php else: ?>
         <div class="learning-layout">
@@ -70,9 +80,10 @@ if ($selectedUnit !== null) {
                 <div class="learning-content">
                     <div class="learning-header">
                     <div class="learning-heading">
-                        <p class="learning-return"><a class="link-button" href="./">教科と単元の選択に戻る</a></p>
+                        <p class="learning-return"><a class="link-button" href="./">学年・教科・単元の選択に戻る</a></p>
                         <h2><?= h($selectedUnit['name']) ?></h2>
                         <p class="learning-meta">
+                            学年: <?= h($selectedGrade['name']) ?> /
                             教科: <?= h($selectedSubject['name']) ?> /
                             対象: <?= h($selectedUnit['grade'] ?? '---') ?>
                         </p>
@@ -129,7 +140,7 @@ if ($selectedUnit !== null) {
             </div>
         </section>
         <?php if ($selectedSubject !== null && $selectedUnit !== null): ?>
-            <aside class="tutor-chat" id="chat-section" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>" tabindex="-1" aria-labelledby="tutor-chat-title" aria-hidden="true" inert>
+            <aside class="tutor-chat" id="chat-section" data-grade="<?= h($selectedGrade['id']) ?>" data-subject="<?= h($selectedSubject['id']) ?>" data-unit="<?= h($selectedUnit['id']) ?>" tabindex="-1" aria-labelledby="tutor-chat-title" aria-hidden="true" inert>
                 <div class="chat-header">
                     <h2 id="tutor-chat-title">家庭教師に質問しよう</h2>
                     <div class="chat-header-actions">
@@ -153,7 +164,7 @@ if ($selectedUnit !== null) {
         </div>
     <?php endif; ?>
 </main>
-<?php if ($message === null && $selectedSubject !== null && $selectedUnit !== null): ?>
+<?php if ($message === null && $selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== null): ?>
     <div class="chat-overlay" id="chat-overlay" hidden></div>
 <?php endif; ?>
 <footer class="app-footer">

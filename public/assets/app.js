@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  const gradeId = chatSection.dataset.grade;
   const subjectId = chatSection.dataset.subject;
   const unitId = chatSection.dataset.unit;
   const form = document.getElementById('tutor-form');
@@ -18,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const overlay = document.getElementById('chat-overlay');
   const statusElement = document.getElementById('chat-status');
 
-  if (!subjectId || !unitId || !form || !textarea || !historyContainer || !submitButton) {
+  if (!gradeId || !subjectId || !unitId || !form || !textarea || !historyContainer || !submitButton) {
     return;
   }
 
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     textarea.focus();
 
     const payload = {
+      grade: gradeId,
       subject: subjectId,
       unit: unitId,
       question,

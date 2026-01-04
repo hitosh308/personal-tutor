@@ -22,7 +22,7 @@ class ContentRepository
         }
 
         $decoded = json_decode($json, true);
-        if (!is_array($decoded) || !isset($decoded['subjects']) || !is_array($decoded['subjects'])) {
+        if (!is_array($decoded) || !isset($decoded['grades']) || !is_array($decoded['grades'])) {
             throw new RuntimeException('コンテンツデータの形式が正しくありません。');
         }
 
@@ -32,19 +32,19 @@ class ContentRepository
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function getSubjects(): array
+    public function getGrades(): array
     {
-        return $this->data['subjects'];
+        return $this->data['grades'];
     }
 
     /**
      * @return array<string, mixed>|null
      */
-    public function findSubject(string $subjectId): ?array
+    public function findGrade(string $gradeId): ?array
     {
-        foreach ($this->getSubjects() as $subject) {
-            if (($subject['id'] ?? null) === $subjectId) {
-                return $subject;
+        foreach ($this->getGrades() as $grade) {
+            if (($grade['id'] ?? null) === $gradeId) {
+                return $grade;
             }
         }
 
@@ -54,9 +54,78 @@ class ContentRepository
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function getUnits(string $subjectId): array
+    public function getSubjects(string $gradeId): array
     {
-        $subject = $this->findSubject($subjectId);
+        $grade = $this->findGrade($gradeId);
+
+        if (!$grade) {
+            return [];
+        }
+
+        $subjects = $grade['subjects'] ?? [];
+
+        if (!is_array($subjects)) {
+            return [];
+        }
+
+        return array_map(fn (array $subject) => $this->attachGradeMetadata($subject, $grade), $subjects);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findSubject(string $subjectId, ?string $gradeId = null): ?array
+    {
+        if ($gradeId !== null && $gradeId !== '') {
+            $grade = $this->findGrade($gradeId);
+            if ($grade !== null) {
+                foreach ($this->getSubjects($gradeId) as $subject) {
+                    if (($subject['id'] ?? null) === $subjectId) {
+                        return $subject;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        foreach ($this->getGrades() as $grade) {
+            $subjects = $grade['subjects'] ?? [];
+            if (!is_array($subjects)) {
+                continue;
+            }
+
+            foreach ($subjects as $subject) {
+                if (($subject['id'] ?? null) === $subjectId) {
+                    return $this->attachGradeMetadata($subject, $grade);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findUnit(string $subjectId, string $unitId, ?string $gradeId = null): ?array
+    {
+        $units = $this->getUnits($subjectId, $gradeId);
+
+        foreach ($units as $unit) {
+            if (($unit['id'] ?? null) === $unitId) {
+                return $unit;
+            }
+        }
+
+        return null;
+    }
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getUnits(string $subjectId, ?string $gradeId = null): array
+    {
+        $subject = $this->findSubject($subjectId, $gradeId);
 
         if (!$subject) {
             return [];
@@ -67,25 +136,10 @@ class ContentRepository
         return is_array($units) ? $units : [];
     }
 
-    /**
-     * @return array<string, mixed>|null
-     */
-    public function findUnit(string $subjectId, string $unitId): ?array
-    {
-        $units = $this->getUnits($subjectId);
-
-        foreach ($units as $unit) {
-            if (($unit['id'] ?? null) === $unitId) {
-                return $unit;
-            }
-        }
-
-        return null;
-    }
-
     public function buildContextText(array $subject, array $unit): string
     {
         $lines = [];
+        $lines[] = 'Grade: ' . ($subject['grade_name'] ?? $subject['grade_id'] ?? '');
         $lines[] = 'Subject: ' . ($subject['name'] ?? $subject['id'] ?? '');
         $lines[] = 'Unit: ' . ($unit['name'] ?? $unit['id'] ?? '');
 
@@ -140,5 +194,18 @@ class ContentRepository
         $text = preg_replace('/\s+/u', ' ', $text ?? '');
 
         return trim((string) $text);
+    }
+
+    /**
+     * @param array<string, mixed> $subject
+     * @param array<string, mixed> $grade
+     * @return array<string, mixed>
+     */
+    private function attachGradeMetadata(array $subject, array $grade): array
+    {
+        $subject['grade_id'] = $grade['id'] ?? null;
+        $subject['grade_name'] = $grade['name'] ?? null;
+
+        return $subject;
     }
 }

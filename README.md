@@ -35,25 +35,32 @@ php -S localhost:8000 -t public
 
 ```json
 {
-  "subjects": [
+  "grades": [
     {
-      "id": "math",
-      "name": "算数・数学",
-      "description": "教科の説明",
-      "units": [
+      "id": "elementary-5",
+      "name": "小学校5年",
+      "description": "学年の説明",
+      "subjects": [
         {
-          "id": "fractions-basics",
-          "name": "分数のきほん",
-          "grade": "対象学年",
-          "overview": "単元の概要",
-          "goals": ["めあて1", "めあて2"],
-          "explanation": "HTML 文字列",
-          "exercises": [
+          "id": "math",
+          "name": "算数・数学",
+          "description": "教科の説明",
+          "units": [
             {
-              "title": "問題タイトル",
-              "question": "問題文",
-              "hint": "ヒント",
-              "answer": "解答"
+              "id": "fractions-basics",
+              "name": "分数のきほん",
+              "grade": "対象学年表示用の文言",
+              "overview": "単元の概要",
+              "goals": ["めあて1", "めあて2"],
+              "explanation": "HTML 文字列",
+              "exercises": [
+                {
+                  "title": "問題タイトル",
+                  "question": "問題文",
+                  "hint": "ヒント",
+                  "answer": "解答"
+                }
+              ]
             }
           ]
         }
