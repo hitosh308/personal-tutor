@@ -299,17 +299,12 @@ class ContentRepository
                 continue;
             }
 
-            if (!preg_match('/\.json$/i', $entry)) {
+            $subjectDirectory = rtrim($gradeDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $entry;
+            if (!is_dir($subjectDirectory)) {
                 continue;
             }
 
-            $path = rtrim($gradeDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $entry;
-            if (!is_file($path)) {
-                continue;
-            }
-
-            $subject = $this->loadSubjectFile($path);
-            $subjects[] = $this->attachGradeMetadata($subject, $grade);
+            $subjects[] = $this->loadSubjectDirectory($subjectDirectory, $entry, $grade);
         }
 
         usort($subjects, fn (array $a, array $b) => strcmp((string) ($a['id'] ?? ''), (string) ($b['id'] ?? '')));
@@ -320,35 +315,121 @@ class ContentRepository
     /**
      * @return array<string, mixed>
      */
-    private function loadSubjectFile(string $path): array
+    private function loadSubjectDirectory(string $subjectDirectory, string $subjectId, array $grade): array
     {
-        $json = file_get_contents($path);
+        $metadata = $this->loadSubjectMetadata($subjectDirectory, $subjectId);
+        $units = $this->loadUnitsFromDirectory($subjectDirectory);
+
+        $subject = [
+            'id' => $metadata['id'],
+            'name' => $metadata['name'],
+            'description' => $metadata['description'],
+            'units' => $units,
+        ];
+
+        return $this->attachGradeMetadata($subject, $grade);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function loadSubjectMetadata(string $subjectDirectory, string $subjectId): array
+    {
+        $metadataPath = rtrim($subjectDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'subject.json';
+
+        $defaults = [
+            'id' => $subjectId,
+            'name' => $subjectId,
+            'description' => '',
+        ];
+
+        if (!is_file($metadataPath)) {
+            return $defaults;
+        }
+
+        $json = file_get_contents($metadataPath);
         if ($json === false) {
-            throw new RuntimeException('教科データを読み込めませんでした: ' . $path);
+            throw new RuntimeException('教科のメタデータを読み込めませんでした: ' . $metadataPath);
         }
 
         $decoded = json_decode($json, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('教科データの形式が正しくありません: ' . $path);
+            throw new RuntimeException('教科のメタデータの形式が正しくありません: ' . $metadataPath);
+        }
+
+        $id = (string) ($decoded['id'] ?? $subjectId);
+        if ($id !== $subjectId) {
+            throw new RuntimeException('教科フォルダ名と subject.json の id が一致しません: ' . $subjectId);
+        }
+
+        return [
+            'id' => $subjectId,
+            'name' => (string) ($decoded['name'] ?? $subjectId),
+            'description' => (string) ($decoded['description'] ?? ''),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function loadUnitsFromDirectory(string $subjectDirectory): array
+    {
+        $entries = scandir($subjectDirectory);
+
+        if ($entries === false) {
+            throw new RuntimeException('教科フォルダを読み込めませんでした: ' . $subjectDirectory);
+        }
+
+        $units = [];
+
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..' || $entry === 'subject.json') {
+                continue;
+            }
+
+            if (!preg_match('/\.json$/i', $entry)) {
+                continue;
+            }
+
+            $path = rtrim($subjectDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $entry;
+            if (!is_file($path)) {
+                continue;
+            }
+
+            $units[] = $this->loadUnitFile($path);
+        }
+
+        usort($units, fn (array $a, array $b) => strcmp((string) ($a['id'] ?? ''), (string) ($b['id'] ?? '')));
+
+        return $units;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadUnitFile(string $path): array
+    {
+        $json = file_get_contents($path);
+        if ($json === false) {
+            throw new RuntimeException('単元データを読み込めませんでした: ' . $path);
+        }
+
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            throw new RuntimeException('単元データの形式が正しくありません: ' . $path);
         }
 
         $filename = pathinfo($path, PATHINFO_FILENAME);
         $id = (string) ($decoded['id'] ?? $filename);
 
-        $units = [];
-        if (isset($decoded['units']) && is_array($decoded['units'])) {
-            foreach ($decoded['units'] as $unit) {
-                if (is_array($unit)) {
-                    $units[] = $unit;
-                }
-            }
-        }
-
         return [
             'id' => $id,
             'name' => (string) ($decoded['name'] ?? $id),
-            'description' => (string) ($decoded['description'] ?? ''),
-            'units' => $units,
+            'grade' => (string) ($decoded['grade'] ?? ''),
+            'overview' => (string) ($decoded['overview'] ?? ''),
+            'goals' => isset($decoded['goals']) && is_array($decoded['goals']) ? array_values($decoded['goals']) : [],
+            'explanation' => $decoded['explanation'] ?? '',
+            'exercises' => isset($decoded['exercises']) && is_array($decoded['exercises']) ? array_values($decoded['exercises']) : [],
         ];
     }
 }
