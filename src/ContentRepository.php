@@ -8,25 +8,15 @@ use RuntimeException;
 
 class ContentRepository
 {
-    private array $data;
+    private array $grades;
 
-    public function __construct(string $jsonPath)
+    public function __construct(string $dataDirectory)
     {
-        if (!is_file($jsonPath)) {
-            throw new RuntimeException('コンテンツファイルが見つかりません: ' . $jsonPath);
+        if (!is_dir($dataDirectory)) {
+            throw new RuntimeException('コンテンツフォルダが見つかりません: ' . $dataDirectory);
         }
 
-        $json = file_get_contents($jsonPath);
-        if ($json === false) {
-            throw new RuntimeException('コンテンツファイルを読み込めませんでした。');
-        }
-
-        $decoded = json_decode($json, true);
-        if (!is_array($decoded) || !isset($decoded['grades']) || !is_array($decoded['grades'])) {
-            throw new RuntimeException('コンテンツデータの形式が正しくありません。');
-        }
-
-        $this->data = $decoded;
+        $this->grades = $this->loadGrades($dataDirectory);
     }
 
     /**
@@ -34,7 +24,7 @@ class ContentRepository
      */
     public function getGrades(): array
     {
-        return $this->data['grades'];
+        return $this->grades;
     }
 
     /**
@@ -207,5 +197,158 @@ class ContentRepository
         $subject['grade_name'] = $grade['name'] ?? null;
 
         return $subject;
+    }
+
+    private function loadGrades(string $dataDirectory): array
+    {
+        $entries = scandir($dataDirectory);
+
+        if ($entries === false) {
+            throw new RuntimeException('コンテンツフォルダを読み込めませんでした: ' . $dataDirectory);
+        }
+
+        $grades = [];
+
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $gradeDirectory = rtrim($dataDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $entry;
+            if (!is_dir($gradeDirectory)) {
+                continue;
+            }
+
+            $gradeData = $this->loadGrade($gradeDirectory, $entry);
+            $grades[] = $gradeData;
+        }
+
+        usort($grades, fn (array $a, array $b) => strcmp((string) ($a['id'] ?? ''), (string) ($b['id'] ?? '')));
+
+        return $grades;
+    }
+
+    private function loadGrade(string $gradeDirectory, string $gradeId): array
+    {
+        $metadata = $this->loadGradeMetadata($gradeDirectory, $gradeId);
+        $subjects = $this->loadSubjects($gradeDirectory, $metadata);
+
+        return [
+            'id' => $gradeId,
+            'name' => $metadata['name'],
+            'description' => $metadata['description'],
+            'subjects' => $subjects,
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function loadGradeMetadata(string $gradeDirectory, string $gradeId): array
+    {
+        $metadataPath = rtrim($gradeDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'grade.json';
+
+        $defaults = [
+            'id' => $gradeId,
+            'name' => $gradeId,
+            'description' => '',
+        ];
+
+        if (!is_file($metadataPath)) {
+            return $defaults;
+        }
+
+        $json = file_get_contents($metadataPath);
+        if ($json === false) {
+            throw new RuntimeException('学年のメタデータを読み込めませんでした: ' . $metadataPath);
+        }
+
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            throw new RuntimeException('学年のメタデータの形式が正しくありません: ' . $metadataPath);
+        }
+
+        $id = (string) ($decoded['id'] ?? $gradeId);
+        if ($id !== $gradeId) {
+            throw new RuntimeException('学年フォルダ名と grade.json の id が一致しません: ' . $gradeId);
+        }
+
+        return [
+            'id' => $gradeId,
+            'name' => (string) ($decoded['name'] ?? $gradeId),
+            'description' => (string) ($decoded['description'] ?? ''),
+        ];
+    }
+
+    /**
+     * @param array<string, string> $grade
+     * @return array<int, array<string, mixed>>
+     */
+    private function loadSubjects(string $gradeDirectory, array $grade): array
+    {
+        $entries = scandir($gradeDirectory);
+
+        if ($entries === false) {
+            throw new RuntimeException('学年フォルダを読み込めませんでした: ' . $gradeDirectory);
+        }
+
+        $subjects = [];
+
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..' || $entry === 'grade.json') {
+                continue;
+            }
+
+            if (!preg_match('/\.json$/i', $entry)) {
+                continue;
+            }
+
+            $path = rtrim($gradeDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $entry;
+            if (!is_file($path)) {
+                continue;
+            }
+
+            $subject = $this->loadSubjectFile($path);
+            $subjects[] = $this->attachGradeMetadata($subject, $grade);
+        }
+
+        usort($subjects, fn (array $a, array $b) => strcmp((string) ($a['id'] ?? ''), (string) ($b['id'] ?? '')));
+
+        return $subjects;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadSubjectFile(string $path): array
+    {
+        $json = file_get_contents($path);
+        if ($json === false) {
+            throw new RuntimeException('教科データを読み込めませんでした: ' . $path);
+        }
+
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            throw new RuntimeException('教科データの形式が正しくありません: ' . $path);
+        }
+
+        $filename = pathinfo($path, PATHINFO_FILENAME);
+        $id = (string) ($decoded['id'] ?? $filename);
+
+        $units = [];
+        if (isset($decoded['units']) && is_array($decoded['units'])) {
+            foreach ($decoded['units'] as $unit) {
+                if (is_array($unit)) {
+                    $units[] = $unit;
+                }
+            }
+        }
+
+        return [
+            'id' => $id,
+            'name' => (string) ($decoded['name'] ?? $id),
+            'description' => (string) ($decoded['description'] ?? ''),
+            'units' => $units,
+        ];
     }
 }
