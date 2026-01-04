@@ -36,7 +36,7 @@ if ($question === '' || $gradeId === '' || $subjectId === '' || $unitId === '') 
 }
 
 try {
-    $repository = new ContentRepository(__DIR__ . '/../data/contents.json');
+    $repository = new ContentRepository(__DIR__ . '/../data/grades');
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => '教材データの読み込みに失敗しました。'], JSON_UNESCAPED_UNICODE);

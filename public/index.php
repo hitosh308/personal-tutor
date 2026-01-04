@@ -11,7 +11,7 @@ function h(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
-$repository = new ContentRepository(__DIR__ . '/../data/contents.json');
+$repository = new ContentRepository(__DIR__ . '/../data/grades');
 $grades = $repository->getGrades();
 
 $gradeId = isset($_GET['grade']) ? (string) $_GET['grade'] : null;

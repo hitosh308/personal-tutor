@@ -31,38 +31,41 @@ php -S localhost:8000 -t public
 
 ## データ構造
 
-学習コンテンツは `data/contents.json` に保存されています。構造は次の通りです。
+学習コンテンツは `data/grades` 配下で学年フォルダごとに管理されています。構造は次の通りです。
 
-```json
+```
+data/grades/
+├── elementary-5/
+│   ├── grade.json        ... 学年のメタデータ (id/name/description)
+│   ├── math.json         ... 教科ごとの教材 (ファイル名が教科 id に相当)
+│   └── science.json      ... 教科ごとの教材
+├── middle-1/
+│   └── grade.json
+└── middle-2/
+    └── grade.json
+```
+
+各教科ファイルの JSON 形式は以下の通りです。
+
+```jsonc
 {
-  "grades": [
+  "id": "math",           // 任意。未指定ならファイル名が id になります
+  "name": "算数・数学",
+  "description": "教科の説明",
+  "units": [
     {
-      "id": "elementary-5",
-      "name": "小学校5年",
-      "description": "学年の説明",
-      "subjects": [
+      "id": "fractions-basics",
+      "name": "分数のきほん",
+      "grade": "対象学年表示用の文言",
+      "overview": "単元の概要",
+      "goals": ["めあて1", "めあて2"],
+      "explanation": "HTML 文字列",
+      "exercises": [
         {
-          "id": "math",
-          "name": "算数・数学",
-          "description": "教科の説明",
-          "units": [
-            {
-              "id": "fractions-basics",
-              "name": "分数のきほん",
-              "grade": "対象学年表示用の文言",
-              "overview": "単元の概要",
-              "goals": ["めあて1", "めあて2"],
-              "explanation": "HTML 文字列",
-              "exercises": [
-                {
-                  "title": "問題タイトル",
-                  "question": "問題文",
-                  "hint": "ヒント",
-                  "answer": "解答"
-                }
-              ]
-            }
-          ]
+          "title": "問題タイトル",
+          "question": "問題文",
+          "hint": "ヒント",
+          "answer": "解答"
         }
       ]
     }
@@ -70,7 +73,7 @@ php -S localhost:8000 -t public
 }
 ```
 
-コンテンツを追加・更新する場合は、上記フォーマットに従って JSON を編集してください。
+コンテンツを追加・更新する場合は、学年フォルダに `grade.json` を用意し、教科ごとの JSON ファイルを追加してください。
 
 ## 備考
 
