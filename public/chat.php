@@ -24,13 +24,14 @@ if (!is_array($payload)) {
 }
 
 $question = trim((string) ($payload['question'] ?? ''));
+$gradeId = isset($payload['grade']) ? (string) $payload['grade'] : '';
 $subjectId = isset($payload['subject']) ? (string) $payload['subject'] : '';
 $unitId = isset($payload['unit']) ? (string) $payload['unit'] : '';
 $history = $payload['history'] ?? [];
 
-if ($question === '' || $subjectId === '' || $unitId === '') {
+if ($question === '' || $gradeId === '' || $subjectId === '' || $unitId === '') {
     http_response_code(400);
-    echo json_encode(['error' => '教科・単元・質問は必須です。'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => '学年・教科・単元・質問は必須です。'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -42,10 +43,11 @@ try {
     exit;
 }
 
-$subject = $repository->findSubject($subjectId);
-$unit = $subject ? $repository->findUnit($subjectId, $unitId) : null;
+$grade = $repository->findGrade($gradeId);
+$subject = $grade ? $repository->findSubject($subjectId, $grade['id']) : null;
+$unit = $subject ? $repository->findUnit($subjectId, $unitId, $grade['id'] ?? null) : null;
 
-if ($subject === null || $unit === null) {
+if ($grade === null || $subject === null || $unit === null) {
     http_response_code(404);
     echo json_encode(['error' => '指定された教材が見つかりません。'], JSON_UNESCAPED_UNICODE);
     exit;
