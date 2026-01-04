@@ -36,44 +36,61 @@ php -S localhost:8000 -t public
 ```
 data/grades/
 ├── elementary-5/
-│   ├── grade.json        ... 学年のメタデータ (id/name/description)
-│   ├── math.json         ... 教科ごとの教材 (ファイル名が教科 id に相当)
-│   └── science.json      ... 教科ごとの教材
+│   ├── grade.json                ... 学年のメタデータ (id/name/description)
+│   ├── math/                    ... 教科フォルダ (フォルダ名が教科 id に相当)
+│   │   ├── subject.json         ... 教科のメタデータ
+│   │   └── fractions-basics.json ... 単元ごとの教材ファイル
+│   └── science/
+│       ├── subject.json
+│       └── states-of-water.json
 ├── middle-1/
 │   └── grade.json
 └── middle-2/
     └── grade.json
 ```
 
-各教科ファイルの JSON 形式は以下の通りです。
+`grade.json` の形式は次の通りです。
 
 ```jsonc
 {
-  "id": "math",           // 任意。未指定ならファイル名が id になります
+  "id": "elementary-5",      // 任意。未指定ならフォルダ名が id になります
+  "name": "小学5年",
+  "description": "表示用の説明文"
+}
+```
+
+各教科フォルダには `subject.json` を置き、以下の形式でメタデータを管理します。
+
+```jsonc
+{
+  "id": "math",          // 任意。未指定ならフォルダ名が id になります
   "name": "算数・数学",
-  "description": "教科の説明",
-  "units": [
+  "description": "教科の説明"
+}
+```
+
+単元は教科フォルダ内に 1 ファイルずつ配置します。ファイル名が単元 id になります。
+
+```jsonc
+{
+  "id": "fractions-basics",  // 任意。未指定ならファイル名が id になります
+  "name": "分数のきほん",
+  "grade": "対象学年表示用の文言",
+  "overview": "単元の概要",
+  "goals": ["めあて1", "めあて2"],
+  "explanation": "HTML 文字列",
+  "exercises": [
     {
-      "id": "fractions-basics",
-      "name": "分数のきほん",
-      "grade": "対象学年表示用の文言",
-      "overview": "単元の概要",
-      "goals": ["めあて1", "めあて2"],
-      "explanation": "HTML 文字列",
-      "exercises": [
-        {
-          "title": "問題タイトル",
-          "question": "問題文",
-          "hint": "ヒント",
-          "answer": "解答"
-        }
-      ]
+      "title": "問題タイトル",
+      "question": "問題文",
+      "hint": "ヒント",
+      "answer": "解答"
     }
   ]
 }
 ```
 
-コンテンツを追加・更新する場合は、学年フォルダに `grade.json` を用意し、教科ごとの JSON ファイルを追加してください。
+コンテンツを追加・更新する場合は、学年フォルダに `grade.json` を用意し、教科ごとのフォルダを作成して `subject.json` と単元ファイルを追加してください。
 
 ## 備考
 
