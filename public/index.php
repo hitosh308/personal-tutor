@@ -152,7 +152,10 @@ if ($selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== nu
                 <div class="card-grid">
                     <?php foreach ($units as $unit): ?>
                         <?php $isActiveUnit = $selectedUnit !== null && $unit['id'] === $selectedUnit['id']; ?>
-                        <a class="card <?= $isActiveUnit ? 'is-active' : '' ?>" href="?grade=<?= h($selectedGrade['id']) ?>&amp;subject=<?= h($selectedSubject['id']) ?>&amp;unit=<?= h($unit['id']) ?>">
+                        <a
+                            class="card <?= $isActiveUnit ? 'is-active' : '' ?>"
+                            href="?grade=<?= h($selectedGrade['id']) ?>&amp;subject=<?= h($selectedSubject['id']) ?>&amp;unit=<?= h($unit['id']) ?>#start-panel"
+                        >
                             <h3><?= h($unit['name'] ?? $unit['id']) ?></h3>
                             <?php if (!empty($unit['overview'])): ?>
                                 <p><?= h($unit['overview']) ?></p>
@@ -165,7 +168,7 @@ if ($selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== nu
     <?php endif; ?>
 
     <?php if ($selectedGrade !== null && $selectedSubject !== null && $selectedUnit !== null && $startUrl !== null): ?>
-        <section class="panel start-panel">
+        <section class="panel start-panel" id="start-panel">
             <h2>4. 学習を始めよう</h2>
             <p class="start-panel__summary">
                 選択中: <strong><?= h($selectedGrade['name']) ?></strong> / <strong><?= h($selectedSubject['name']) ?></strong> / <strong><?= h($selectedUnit['name']) ?></strong>
